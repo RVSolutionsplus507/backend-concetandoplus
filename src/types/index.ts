@@ -1,6 +1,6 @@
 // Re-exportar tipos de Prisma para usar en toda la aplicación
-import type { GameStatus, GamePhase, CardType, Difficulty, PlayerRole } from '../../generated/prisma';
-export type { GameStatus, GamePhase, CardType, Difficulty, PlayerRole };
+import { GameStatus, GamePhase, CardType, Difficulty, PlayerRole } from '../../generated/prisma';
+export { GameStatus, GamePhase, CardType, Difficulty, PlayerRole };
 
 export interface CreateGameRequest {
   hostName: string;
