@@ -138,6 +138,9 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // Obtener estadísticas del jugador
+    const stats = await UserModel.getUserStats(user.id);
+
     // Generar JWT token
     const token = jwt.sign(
       { 
@@ -156,7 +159,22 @@ router.post('/login', async (req, res) => {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role
+        role: user.role,
+        isOnline: true,
+        stats: stats || {
+          gamesPlayed: 0,
+          gamesWon: 0,
+          totalScore: 0,
+          averageScore: 0,
+          categoryStats: {
+            RC: { questionsAnswered: 0, correctAnswers: 0, totalPoints: 0, accuracy: 0 },
+            AC: { questionsAnswered: 0, correctAnswers: 0, totalPoints: 0, accuracy: 0 },
+            E: { questionsAnswered: 0, correctAnswers: 0, totalPoints: 0, accuracy: 0 },
+            CE: { questionsAnswered: 0, correctAnswers: 0, totalPoints: 0, accuracy: 0 }
+          }
+        },
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
       },
       token
     });
@@ -196,6 +214,9 @@ router.post('/admin', async (req, res) => {
       });
     }
 
+    // Obtener estadísticas del jugador
+    const stats = await UserModel.getUserStats(user.id);
+
     // Generar JWT token
     const token = jwt.sign(
       { 
@@ -214,7 +235,22 @@ router.post('/admin', async (req, res) => {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role
+        role: user.role,
+        isOnline: true,
+        stats: stats || {
+          gamesPlayed: 0,
+          gamesWon: 0,
+          totalScore: 0,
+          averageScore: 0,
+          categoryStats: {
+            RC: { questionsAnswered: 0, correctAnswers: 0, totalPoints: 0, accuracy: 0 },
+            AC: { questionsAnswered: 0, correctAnswers: 0, totalPoints: 0, accuracy: 0 },
+            E: { questionsAnswered: 0, correctAnswers: 0, totalPoints: 0, accuracy: 0 },
+            CE: { questionsAnswered: 0, correctAnswers: 0, totalPoints: 0, accuracy: 0 }
+          }
+        },
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
       },
       token
     });

@@ -19,9 +19,15 @@ dotenv.config();
 
 const app = express();
 const server = createServer(app);
+
+// Normalizar URLs (eliminar barra final si existe)
+const normalizeUrl = (url: string) => url.replace(/\/$/, '');
+const frontendUrl = normalizeUrl(process.env.FRONTEND_URL || "http://localhost:3000");
+const socketCorsOrigin = normalizeUrl(process.env.SOCKET_CORS_ORIGIN || "http://localhost:3000");
+
 const io = new Server(server, {
   cors: {
-    origin: process.env.SOCKET_CORS_ORIGIN || "http://localhost:3000",
+    origin: socketCorsOrigin,
     methods: ["GET", "POST"]
   }
 });
@@ -31,7 +37,7 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  origin: frontendUrl,
   credentials: true
 }));
 app.use(morgan('combined'));

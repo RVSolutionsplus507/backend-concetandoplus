@@ -87,4 +87,39 @@ export class UserModel {
       }
     });
   }
+
+  static async getUserStats(userId: string) {
+    const client = await getPrismaClient();
+    
+    // Obtener todas las partidas completadas del usuario
+    const players = await client.player.findMany({
+      where: {
+        id: userId,
+        game: {
+          status: 'COMPLETED'
+        }
+      },
+      include: {
+        game: true
+      }
+    });
+
+    const gamesPlayed = players.length;
+    const gamesWon = players.filter((p: { game: { winnerId: string | null } }) => p.game.winnerId === userId).length;
+    const totalScore = players.reduce((sum: number, p: { score: number }) => sum + p.score, 0);
+    const averageScore = gamesPlayed > 0 ? Math.round(totalScore / gamesPlayed) : 0;
+
+    return {
+      gamesPlayed,
+      gamesWon,
+      totalScore,
+      averageScore,
+      categoryStats: {
+        RC: { questionsAnswered: 0, correctAnswers: 0, totalPoints: 0, accuracy: 0 },
+        AC: { questionsAnswered: 0, correctAnswers: 0, totalPoints: 0, accuracy: 0 },
+        E: { questionsAnswered: 0, correctAnswers: 0, totalPoints: 0, accuracy: 0 },
+        CE: { questionsAnswered: 0, correctAnswers: 0, totalPoints: 0, accuracy: 0 }
+      }
+    };
+  }
 }
