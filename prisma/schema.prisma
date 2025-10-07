@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      UserRole @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("users")
+}
+
+model Game {
+  id                String     @id @default(cuid())
+  roomCode          String     @unique
+  status            GameStatus @default(WAITING)
+  currentTurn       Int        @default(0)
+  phase             GamePhase  @default(EXPLANATION)
+  targetScore       Int?       @default(20)
+  allowedCategories Json       @default("[\"RC\",\"AC\",\"E\",\"CE\"]")
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  
+  players     Player[]
+  cardPiles   CardPile[]
+  rounds      GameRound[]
+  
+  @@map("games")
+}
+
+model Player {
+  id                  String     @id @default(cuid())
+  name                String
+  gameId              String
+  score               Int        @default(0)
+  color               String
+  isHost              Boolean    @default(false)
+  role                PlayerRole @default(PLAYER)
+  hasReadExplanations Boolean    @default(false)
+  createdAt           DateTime   @default(now())
+  
+  game    Game           @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  answers PlayerAnswer[]
+  
+  @@map("players")
+}
+
+model Card {
+  id            String     @id @default(cuid())
+  type          CardType
+  isExplanation Boolean    @default(false)
+  question      String
+  options       Json?
+  correctAnswer String?
+  points        Int
+  difficulty    Difficulty
+  imageUrl      String     // Ruta a la imagen: "/cards/DIBUJOS_FINALES_CONECNTANDO+ copy (1)-01.png"
+  cardNumber    Int        // Número de carta: 1, 2, 3...
+  createdAt     DateTime   @default(now())
+  
+  cardPiles CardPile[]
+  
+  @@map("cards")
+}
+
+model CardPile {
+  id       String  @id @default(cuid())
+  gameId   String
+  cardType CardType
+  cardId   String
+  position Int
+  isUsed   Boolean @default(false)
+  
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  card Card @relation(fields: [cardId], references: [id])
+  
+  @@unique([gameId, cardType, position])
+  @@map("card_piles")
+}
+
+model GameRound {
+  id          String   @id @default(cuid())
+  gameId      String
+  roundNumber Int
+  playerId    String
+  cardType    CardType
+  cardId      String
+  createdAt   DateTime @default(now())
+  
+  game    Game           @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  answers PlayerAnswer[]
+  
+  @@map("game_rounds")
+}
+
+model PlayerAnswer {
+  id           String   @id @default(cuid())
+  playerId     String
+  roundId      String
+  answer       String
+  isCorrect    Boolean
+  pointsEarned Int      @default(0)
+  createdAt    DateTime @default(now())
+  
+  player Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  round  GameRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  
+  @@map("player_answers")
+}
+
+enum GameStatus {
+  WAITING
+  IN_PROGRESS
+  FINISHED
+}
+
+enum GamePhase {
+  WAITING
+  EXPLANATION
+  IN_PROGRESS
+  FINISHED
+  COMPLETED
+}
+
+enum CardType {
+  RC // Resolución de Conflictos (Amarillo)
+  AC // Autoconocimiento (Rosado)
+  E  // Empatía (Celeste)
+  CE // Comunicación Efectiva (Verde)
+}
+
+enum Difficulty {
+  EASY   // 2 puntos
+  MEDIUM // 3 puntos
+  HARD   // 4 puntos
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum PlayerRole {
+  PLAYER
+  MODERATOR
+  PLAYER_MODERATOR
+}
