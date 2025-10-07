@@ -1,8 +1,9 @@
-let prisma: any = null;
+import { PrismaClient, GameStatus } from '../../generated/prisma';
+
+let prisma: PrismaClient | null = null;
 
 const getPrismaClient = async () => {
   if (!prisma) {
-    const { PrismaClient } = await import('../../generated/prisma');
     prisma = new PrismaClient();
   }
   return prisma;
@@ -116,7 +117,7 @@ export class UserModel {
       where: {
         name: user.name,
         game: {
-          status: 'COMPLETED' as never
+          status: GameStatus.FINISHED
         }
       },
       include: {
@@ -125,7 +126,22 @@ export class UserModel {
     });
 
     const gamesPlayed = players.length;
-    const gamesWon = players.filter((p: { game: { winnerId: string | null }; id: string }) => p.game.winnerId === p.id).length;
+    
+    // Calcular victorias: el jugador con más puntos en cada partida
+    let gamesWon = 0;
+    const gameIds = new Set(players.map(p => p.gameId));
+    
+    for (const gameId of gameIds) {
+      const gamePlayers = await client.player.findMany({
+        where: { gameId },
+        orderBy: { score: 'desc' }
+      });
+      
+      if (gamePlayers.length > 0 && gamePlayers[0].name === user.name) {
+        gamesWon++;
+      }
+    }
+    
     const totalScore = players.reduce((sum: number, p: { score: number }) => sum + p.score, 0);
     const averageScore = gamesPlayed > 0 ? Math.round(totalScore / gamesPlayed) : 0;
 
