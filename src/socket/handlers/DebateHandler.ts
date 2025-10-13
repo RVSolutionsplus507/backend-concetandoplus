@@ -122,21 +122,38 @@ export class DebateHandler {
     });
 
     setTimeout(async () => {
+      console.log(`🧹 [DEBATE] Iniciando limpieza de sala ${room.roomCode}...`);
+
       // Cleanup Daily.co room if it exists
       if (room.id && dailyService.isConfigured()) {
+        console.log(`🔍 [DEBATE] Verificando sala de Daily.co para gameId: ${room.id}`);
         try {
           const game = await GameModel.findById(room.id);
+          console.log(`📊 [DEBATE] Game encontrado:`, {
+            id: game?.id,
+            roomCode: game?.roomCode,
+            dailyRoomName: game?.dailyRoomName
+          });
+
           if (game?.dailyRoomName) {
-            await dailyService.deleteRoom(game.dailyRoomName);
-            console.log(`🎥 Daily.co room ${game.dailyRoomName} eliminada`);
+            console.log(`🎥 [DEBATE] Intentando eliminar Daily.co room: ${game.dailyRoomName}`);
+            const deleted = await dailyService.deleteRoom(game.dailyRoomName);
+            if (deleted) {
+              console.log(`✅ [DEBATE] Daily.co room ${game.dailyRoomName} eliminada exitosamente`);
+            } else {
+              console.log(`⚠️ [DEBATE] No se pudo eliminar la sala de Daily.co`);
+            }
+          } else {
+            console.log(`⚠️ [DEBATE] No hay dailyRoomName para eliminar`);
           }
         } catch (error) {
-          console.error('Error al eliminar sala de Daily.co:', error);
+          console.error('❌ [DEBATE] Error al eliminar sala de Daily.co:', error);
         }
       }
 
       gameRoomStore.deleteRoom(room.roomCode);
       playersArray.forEach(p => gameRoomStore.deletePlayerSocket(p.id));
+      console.log(`🗑️ [DEBATE] Sala ${room.roomCode} eliminada de memoria`);
     }, 1000);
   }
 }

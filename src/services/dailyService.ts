@@ -109,24 +109,33 @@ class DailyService {
    */
   async deleteRoom(roomName: string): Promise<boolean> {
     if (!this.apiKey) {
-      console.error('Daily.co API key not configured');
+      console.error('❌ Daily.co API key not configured');
       return false;
     }
 
     try {
-      await axios.delete(`${this.apiUrl}/rooms/${roomName}`, {
+      console.log(`🔥 Enviando petición DELETE a Daily.co API para room: ${roomName}`);
+      console.log(`🔗 URL: ${this.apiUrl}/rooms/${roomName}`);
+
+      const response = await axios.delete(`${this.apiUrl}/rooms/${roomName}`, {
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
         },
       });
 
-      console.log(`✅ Daily.co room deleted: ${roomName}`);
+      console.log(`✅ Daily.co room deleted successfully: ${roomName}`);
+      console.log(`📊 Response status: ${response.status}`);
       return true;
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        console.error('Error deleting Daily.co room:', error.response?.data || error.message);
+        console.error(`❌ Error deleting Daily.co room "${roomName}":`, {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          message: error.message
+        });
       } else {
-        console.error('Error deleting Daily.co room:', error);
+        console.error(`❌ Unknown error deleting Daily.co room "${roomName}":`, error);
       }
       return false;
     }

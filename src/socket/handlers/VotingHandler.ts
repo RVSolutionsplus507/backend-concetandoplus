@@ -183,21 +183,38 @@ export class VotingHandler {
 
       // Eliminar sala y cleanup de Daily.co
       setTimeout(async () => {
+        console.log(`🧹 [VOTING] Iniciando limpieza de sala ${room.roomCode}...`);
+
         // Cleanup Daily.co room if it exists
         if (room.id && dailyService.isConfigured()) {
+          console.log(`🔍 [VOTING] Verificando sala de Daily.co para gameId: ${room.id}`);
           try {
             const game = await GameModel.findById(room.id);
+            console.log(`📊 [VOTING] Game encontrado:`, {
+              id: game?.id,
+              roomCode: game?.roomCode,
+              dailyRoomName: game?.dailyRoomName
+            });
+
             if (game?.dailyRoomName) {
-              await dailyService.deleteRoom(game.dailyRoomName);
-              console.log(`🎥 Daily.co room ${game.dailyRoomName} eliminada`);
+              console.log(`🎥 [VOTING] Intentando eliminar Daily.co room: ${game.dailyRoomName}`);
+              const deleted = await dailyService.deleteRoom(game.dailyRoomName);
+              if (deleted) {
+                console.log(`✅ [VOTING] Daily.co room ${game.dailyRoomName} eliminada exitosamente`);
+              } else {
+                console.log(`⚠️ [VOTING] No se pudo eliminar la sala de Daily.co`);
+              }
+            } else {
+              console.log(`⚠️ [VOTING] No hay dailyRoomName para eliminar`);
             }
           } catch (error) {
-            console.error('Error al eliminar sala de Daily.co:', error);
+            console.error('❌ [VOTING] Error al eliminar sala de Daily.co:', error);
           }
         }
 
         gameRoomStore.deleteRoom(room.roomCode);
         playersArray.forEach(p => gameRoomStore.deletePlayerSocket(p.id));
+        console.log(`🗑️ [VOTING] Sala ${room.roomCode} eliminada de memoria`);
       }, 1000);
 
       return;

@@ -207,22 +207,41 @@ export class GameHandler {
 
       // Eliminar sala y cleanup de Daily.co
       setTimeout(async () => {
+        console.log(`🧹 Iniciando limpieza de sala ${room.roomCode}...`);
+
         // Cleanup Daily.co room if it exists
         if (room.id && dailyService.isConfigured()) {
+          console.log(`🔍 Verificando sala de Daily.co para gameId: ${room.id}`);
           try {
             const game = await GameModel.findById(room.id);
+            console.log(`📊 Game encontrado:`, {
+              id: game?.id,
+              roomCode: game?.roomCode,
+              dailyRoomName: game?.dailyRoomName,
+              dailyRoomUrl: game?.dailyRoomUrl
+            });
+
             if (game?.dailyRoomName) {
-              await dailyService.deleteRoom(game.dailyRoomName);
-              console.log(`🎥 Daily.co room ${game.dailyRoomName} eliminada`);
+              console.log(`🎥 Intentando eliminar Daily.co room: ${game.dailyRoomName}`);
+              const deleted = await dailyService.deleteRoom(game.dailyRoomName);
+              if (deleted) {
+                console.log(`✅ Daily.co room ${game.dailyRoomName} eliminada exitosamente`);
+              } else {
+                console.log(`⚠️ No se pudo eliminar la sala de Daily.co: ${game.dailyRoomName}`);
+              }
+            } else {
+              console.log(`⚠️ No hay dailyRoomName para eliminar`);
             }
           } catch (error) {
-            console.error('Error al eliminar sala de Daily.co:', error);
+            console.error('❌ Error al eliminar sala de Daily.co:', error);
           }
+        } else {
+          console.log(`⚠️ No se puede limpiar Daily.co: room.id=${room.id}, configured=${dailyService.isConfigured()}`);
         }
 
         gameRoomStore.deleteRoom(room.roomCode);
         playersArray.forEach(p => gameRoomStore.deletePlayerSocket(p.id));
-        console.log(`🗑️ Sala ${room.roomCode} eliminada`);
+        console.log(`🗑️ Sala ${room.roomCode} eliminada de memoria`);
       }, 1000);
     } catch (error) {
       console.error('Error al finalizar partida:', error);
