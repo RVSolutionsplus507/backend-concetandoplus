@@ -2,7 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import { GameModel } from '../models/gameModel';
 import { PlayerModel } from '../models/playerModel';
 import { CreateGameRequest, JoinGameRequest } from '../types';
-import { AppError } from '../middleware/errorHandler';
+import { NotFoundError, ValidationError, ForbiddenError, ConflictError } from '../errors/AppError';
+import { dailyService } from '../services/dailyService';
 
 export class GameController {
   static async getAvailableGames(req: Request, res: Response, next: NextFunction) {
@@ -21,9 +22,35 @@ export class GameController {
   static async createGame(req: Request, res: Response, next: NextFunction) {
     try {
       const gameData: CreateGameRequest = req.body;
-      
+
       const game = await GameModel.createGame(gameData);
       await GameModel.initializeCardPiles(game.id);
+
+      // Create Daily.co video room for the game
+      console.log('🎥 Verificando configuración de Daily.co...');
+      console.log('🎥 Daily.co configurado:', dailyService.isConfigured());
+
+      if (dailyService.isConfigured()) {
+        console.log('🎥 Intentando crear sala de Daily.co para roomCode:', game.roomCode);
+        try {
+          const dailyRoom = await dailyService.createRoom(game.roomCode, 8);
+          console.log('🎥 Respuesta de Daily.co:', dailyRoom);
+
+          if (dailyRoom) {
+            // Update game with Daily.co room info
+            await GameModel.updateDailyRoomInfo(game.id, dailyRoom.name, dailyRoom.url);
+            game.dailyRoomName = dailyRoom.name;
+            game.dailyRoomUrl = dailyRoom.url;
+            console.log('✅ Sala de Daily.co creada:', dailyRoom.url);
+          } else {
+            console.log('⚠️ dailyService.createRoom retornó null o undefined');
+          }
+        } catch (error) {
+          console.error('❌ Error al crear sala de Daily.co:', error);
+        }
+      } else {
+        console.log('⚠️ Daily.co no está configurado. Verifica DAILY_API_KEY y DAILY_DOMAIN en .env');
+      }
 
       res.status(201).json({
         success: true,
@@ -49,15 +76,11 @@ export class GameController {
       }
       
       if (!game) {
-        const error: AppError = new Error('Juego no encontrado');
-        error.statusCode = 404;
-        throw error;
+        throw new NotFoundError('Juego');
       }
 
       if (game.players.length >= 8) {
-        const error: AppError = new Error('La sala está llena (máximo 8 jugadores)');
-        error.statusCode = 400;
-        throw error;
+        throw new ValidationError('La sala está llena (máximo 8 jugadores)');
       }
 
       // Si se une por gameId, usar información del usuario autenticado
@@ -65,9 +88,7 @@ export class GameController {
         // El usuario ya está autenticado, verificar si está asignado al juego
         const userInGame = game.players.some((player: any) => player.name === (req as any).user?.name);
         if (!userInGame) {
-          const error: AppError = new Error('No estás asignado a esta partida');
-          error.statusCode = 403;
-          throw error;
+          throw new ForbiddenError('No estás asignado a esta partida');
         }
 
         // El usuario está asignado, permitir acceso al juego
@@ -82,9 +103,7 @@ export class GameController {
       // Lógica original para unirse por roomCode
       const colorInUse = game.players.some((player: any) => player.color === joinData.playerColor);
       if (colorInUse) {
-        const error: AppError = new Error('Color ya seleccionado por otro jugador');
-        error.statusCode = 400;
-        throw error;
+        throw new ConflictError('Color ya seleccionado por otro jugador');
       }
 
       const playerData = {
@@ -111,9 +130,7 @@ export class GameController {
       
       const game = await GameModel.findByRoomCode(roomCode);
       if (!game) {
-        const error: AppError = new Error('Juego no encontrado');
-        error.statusCode = 404;
-        throw error;
+        throw new NotFoundError('Juego');
       }
 
       res.status(200).json({

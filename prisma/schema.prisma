@@ -28,13 +28,15 @@ model Game {
   phase             GamePhase  @default(EXPLANATION)
   targetScore       Int?       @default(20)
   allowedCategories Json       @default("[\"RC\",\"AC\",\"E\",\"CE\"]")
+  dailyRoomName     String?    // Daily.co room name (e.g., "conectandoplus-abc123")
+  dailyRoomUrl      String?    // Daily.co room URL
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
-  
+
   players     Player[]
   cardPiles   CardPile[]
   rounds      GameRound[]
-  
+
   @@map("games")
 }
 

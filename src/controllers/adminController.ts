@@ -1,5 +1,7 @@
 import { Request, Response } from 'express'
 import { PrismaClient } from '../../generated/prisma'
+import { dailyService } from '../services/dailyService'
+import { GameModel } from '../models/gameModel'
 
 const prisma = new PrismaClient()
 
@@ -227,6 +229,30 @@ export const createGame = async (req: Request, res: Response): Promise<void> => 
       }
     })
 
+    // Create Daily.co video room for the game
+    console.log('🎥 [ADMIN] Verificando configuración de Daily.co...')
+    console.log('🎥 [ADMIN] Daily.co configurado:', dailyService.isConfigured())
+
+    if (dailyService.isConfigured()) {
+      console.log('🎥 [ADMIN] Intentando crear sala de Daily.co para roomCode:', game.roomCode)
+      try {
+        const dailyRoom = await dailyService.createRoom(game.roomCode, 8)
+        console.log('🎥 [ADMIN] Respuesta de Daily.co:', dailyRoom)
+
+        if (dailyRoom) {
+          // Update game with Daily.co room info
+          await GameModel.updateDailyRoomInfo(game.id, dailyRoom.name, dailyRoom.url)
+          console.log('✅ [ADMIN] Sala de Daily.co creada:', dailyRoom.url)
+        } else {
+          console.log('⚠️ [ADMIN] dailyService.createRoom retornó null o undefined')
+        }
+      } catch (error) {
+        console.error('❌ [ADMIN] Error al crear sala de Daily.co:', error)
+      }
+    } else {
+      console.log('⚠️ [ADMIN] Daily.co no está configurado. Verifica DAILY_API_KEY y DAILY_DOMAIN en .env')
+    }
+
     // Obtener el admin actual del token
     const adminId = (req.user as { id: string })?.id
     const admin = adminId ? await prisma.user.findUnique({ where: { id: adminId } }) : null
@@ -318,6 +344,8 @@ export const createGame = async (req: Request, res: Response): Promise<void> => 
       roomCode: gameWithPlayers!.roomCode,
       status: gameWithPlayers!.status,
       targetScore: gameWithPlayers!.targetScore,
+      dailyRoomName: gameWithPlayers!.dailyRoomName,
+      dailyRoomUrl: gameWithPlayers!.dailyRoomUrl,
       createdAt: gameWithPlayers!.createdAt,
       players: gameWithPlayers!.players
     })

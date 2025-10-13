@@ -24,6 +24,8 @@ export interface GameResponse {
   targetScore: number | null;
   allowedCategories?: CardType[];
   isFinished?: boolean;
+  dailyRoomName?: string | null;
+  dailyRoomUrl?: string | null;
   players: PlayerResponse[];
 }
 

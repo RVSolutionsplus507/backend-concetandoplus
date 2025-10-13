@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { PlayerModel } from '../models/playerModel';
 import { GameModel } from '../models/gameModel';
 import { SubmitAnswerRequest } from '../types';
-import { AppError } from '../middleware/errorHandler';
+import { AppError } from '../errors/AppError';
 
 export class PlayerController {
   static async updateScore(req: Request, res: Response, next: NextFunction) {

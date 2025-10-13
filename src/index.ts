@@ -11,9 +11,11 @@ import playerRoutes from './routes/playerRoutes';
 import cardRoutes from './routes/cardRoutes';
 import authRoutes from './routes/authRoutes';
 import adminRoutes from './routes/admin';
-import { initializeSocket } from './services/socketService';
+import { initializeSocket } from './socket/SocketServer';
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
+import { apiLimiter, authLimiter } from './middleware/rateLimiter';
+import logger from './utils/logger';
 
 dotenv.config();
 
@@ -44,12 +46,12 @@ app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
-app.use('/auth', authRoutes);
-app.use('/api/games', gameRoutes);
-app.use('/api/players', playerRoutes);
-app.use('/api/cards', cardRoutes);
-app.use('/api/admin', adminRoutes);
+// Routes con rate limiting
+app.use('/auth', authLimiter, authRoutes);
+app.use('/api/games', apiLimiter, gameRoutes);
+app.use('/api/players', apiLimiter, playerRoutes);
+app.use('/api/cards', apiLimiter, cardRoutes);
+app.use('/api/admin', apiLimiter, adminRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -64,7 +66,9 @@ app.use(notFound);
 app.use(errorHandler);
 
 server.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+  const message = `🚀 Servidor corriendo en puerto ${PORT}`;
+  console.log(message);
+  logger.info(message, { port: PORT, env: process.env.NODE_ENV || 'development' });
   console.log(`🎮 Conectando+ Backend iniciado`);
   console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`);
 });

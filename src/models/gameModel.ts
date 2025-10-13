@@ -44,10 +44,12 @@ export class GameModel {
         phase: game.phase,
         currentTurn: game.currentTurn,
         targetScore: game.targetScore,
-        allowedCategories: (Array.isArray(game.allowedCategories) 
-          ? game.allowedCategories 
+        allowedCategories: (Array.isArray(game.allowedCategories)
+          ? game.allowedCategories
           : ['RC', 'AC', 'E', 'CE']) as unknown as CardType[],
         isFinished,
+        dailyRoomName: (game as any).dailyRoomName || null,
+        dailyRoomUrl: (game as any).dailyRoomUrl || null,
         winner: winner ? {
           id: winner.id,
           name: winner.name,
@@ -107,9 +109,11 @@ export class GameModel {
       phase: game.phase as any,
       currentTurn: game.currentTurn,
       targetScore: game.targetScore,
-      allowedCategories: (Array.isArray(game.allowedCategories) 
-        ? game.allowedCategories 
+      allowedCategories: (Array.isArray(game.allowedCategories)
+        ? game.allowedCategories
         : ['RC', 'AC', 'E', 'CE']) as any,
+      dailyRoomName: (game as any).dailyRoomName || null,
+      dailyRoomUrl: (game as any).dailyRoomUrl || null,
       players: game.players.map((player: any) => ({
         id: player.id,
         name: player.name,
@@ -139,9 +143,11 @@ export class GameModel {
       phase: game.phase as any,
       currentTurn: game.currentTurn,
       targetScore: game.targetScore,
-      allowedCategories: (Array.isArray(game.allowedCategories) 
-        ? game.allowedCategories 
+      allowedCategories: (Array.isArray(game.allowedCategories)
+        ? game.allowedCategories
         : ['RC', 'AC', 'E', 'CE']) as any,
+      dailyRoomName: (game as any).dailyRoomName || null,
+      dailyRoomUrl: (game as any).dailyRoomUrl || null,
       players: game.players.map((player: any) => ({
         id: player.id,
         name: player.name,
@@ -171,9 +177,11 @@ export class GameModel {
       phase: game.phase as any,
       currentTurn: game.currentTurn,
       targetScore: game.targetScore,
-      allowedCategories: (Array.isArray(game.allowedCategories) 
-        ? game.allowedCategories 
+      allowedCategories: (Array.isArray(game.allowedCategories)
+        ? game.allowedCategories
         : ['RC', 'AC', 'E', 'CE']) as any,
+      dailyRoomName: (game as any).dailyRoomName || null,
+      dailyRoomUrl: (game as any).dailyRoomUrl || null,
       players: game.players.map((player: any) => ({
         id: player.id,
         name: player.name,
@@ -320,7 +328,7 @@ export class GameModel {
 
   static async initializeCardPiles(gameId: string): Promise<void> {
     const cards = await prisma.card.findMany();
-    
+
     // Agrupar cartas por tipo
     const cardsByType = {
       RC: cards.filter((card: Card) => card.type === 'RC'),
@@ -332,7 +340,7 @@ export class GameModel {
     // Crear pilas mezcladas para cada tipo
     for (const [cardType, typeCards] of Object.entries(cardsByType)) {
       const shuffledCards = typeCards.sort(() => Math.random() - 0.5);
-      
+
       const cardPileData = shuffledCards.map((card: Card, index: number) => ({
         gameId,
         cardType: cardType as CardType,
@@ -344,5 +352,15 @@ export class GameModel {
         data: cardPileData
       });
     }
+  }
+
+  static async updateDailyRoomInfo(gameId: string, dailyRoomName: string, dailyRoomUrl: string): Promise<void> {
+    await prisma.game.update({
+      where: { id: gameId },
+      data: {
+        dailyRoomName,
+        dailyRoomUrl
+      }
+    });
   }
 }

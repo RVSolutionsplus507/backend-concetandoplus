@@ -1,25 +1,41 @@
 import { Request, Response, NextFunction } from 'express';
-
-export interface AppError extends Error {
-  statusCode?: number;
-  isOperational?: boolean;
-}
+import { AppError } from '../errors/AppError';
+import logger from '../utils/logger';
 
 export const errorHandler = (
-  err: AppError,
+  err: Error | AppError,
   req: Request,
   res: Response,
-  next: NextFunction
-) => {
-  const statusCode = err.statusCode || 500;
-  const message = err.message || 'Error interno del servidor';
+  _next: NextFunction
+): void => {
+  // Si es un AppError, usamos sus propiedades
+  if (err instanceof AppError) {
+    logger.warn('Operational error', {
+      message: err.message,
+      statusCode: err.statusCode,
+      path: req.path,
+      method: req.method
+    });
 
-  console.error(`Error ${statusCode}: ${message}`);
-  console.error(err.stack);
+    res.status(err.statusCode).json({
+      success: false,
+      message: err.message,
+      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    });
+    return;
+  }
 
-  res.status(statusCode).json({
+  // Error inesperado
+  logger.error('Unexpected error', {
+    message: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method
+  });
+
+  res.status(500).json({
     success: false,
-    message,
+    message: 'Error interno del servidor',
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 };

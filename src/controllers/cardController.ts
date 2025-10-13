@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { CardModel } from '../models/cardModel';
 import { CardType } from '../types';
-import { AppError } from '../middleware/errorHandler';
+import { NotFoundError } from '../errors/AppError';
 
 export class CardController {
   static async drawCard(req: Request, res: Response, next: NextFunction) {
@@ -10,9 +10,7 @@ export class CardController {
       
       const card = await CardModel.getNextCardFromPile(gameId, cardType as CardType);
       if (!card) {
-        const error: AppError = new Error('No hay más cartas disponibles en esta pila');
-        error.statusCode = 404;
-        throw error;
+        throw new NotFoundError('No hay más cartas disponibles en esta pila');
       }
 
       res.status(200).json({
@@ -31,9 +29,7 @@ export class CardController {
       
       const card = await CardModel.getExplanationCard(cardType as CardType);
       if (!card) {
-        const error: AppError = new Error('Carta de explicación no encontrada');
-        error.statusCode = 404;
-        throw error;
+        throw new NotFoundError('Carta de explicación');
       }
 
       res.status(200).json({
