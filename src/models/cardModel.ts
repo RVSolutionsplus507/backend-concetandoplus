@@ -42,8 +42,15 @@ export class CardModel {
     };
   }
 
-  static async getExplanationCard(cardType: CardType): Promise<CardResponse | null> {
+  static async getExplanationCard(cardType: CardType, allowedCategories?: CardType[]): Promise<CardResponse | null> {
     const prismaClient = getPrismaClient();
+    
+    // Si se especifican categorías permitidas, validar que el tipo solicitado esté permitido
+    if (allowedCategories && !allowedCategories.includes(cardType)) {
+      console.log(`⚠️ Categoría ${cardType} no está en las permitidas: ${allowedCategories.join(', ')}`);
+      return null;
+    }
+    
     const card = await prismaClient.card.findFirst({
       where: {
         type: cardType as unknown as CardType,
