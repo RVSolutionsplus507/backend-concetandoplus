@@ -116,7 +116,56 @@ export class GameHandler {
       // Obtener carta
       const card = await CardModel.getRandomCard(data.cardType, room.gameState.usedCards, room.allowedCategories);
       if (!card) {
-        socket.emit('error', { message: 'No hay cartas disponibles de este tipo' });
+        // Verificar si hay cartas disponibles en CUALQUIER categoría permitida
+        const allowedCategories = room.allowedCategories || ['RC', 'AC', 'E', 'CE'];
+        let hasAnyCards = false;
+        
+        for (const category of allowedCategories) {
+          const testCard = await CardModel.getRandomCard(category as CardType, room.gameState.usedCards, room.allowedCategories);
+          if (testCard) {
+            hasAnyCards = true;
+            break;
+          }
+        }
+        
+        if (!hasAnyCards) {
+          // No hay más cartas en ninguna categoría permitida - TERMINAR JUEGO
+          console.log('🏁 No hay más cartas disponibles - Finalizando juego');
+          
+          // Limpiar timer
+          if (room.answerTimer) {
+            clearTimeout(room.answerTimer);
+          }
+          
+          // Determinar ganador por puntos
+          const playersArray = Array.from(room.players.values());
+          const winner = gameService.getWinnerByScore(playersArray);
+          
+          // Finalizar
+          room.currentPhase = 'FINISHED';
+          room.gameState.phase = 'FINISHED';
+          room.gameState.currentAnswer = undefined;
+          room.gameState.currentCard = undefined;
+          
+          // Actualizar BD
+          if (room.id) {
+            await GameModel.updateGamePhase(room.id, 'COMPLETED');
+          }
+          
+          // Emitir evento de fin de juego
+          this.io.to(data.roomCode).emit('game-ended', {
+            winner: winner ? { id: winner.id, name: winner.name, score: winner.score } : null,
+            reason: 'NO_CARDS_LEFT',
+            message: '¡Se acabaron las cartas! El jugador con más puntos gana.',
+            finalScores: playersArray.map(p => ({ id: p.id, name: p.name, score: p.score }))
+          });
+          
+          console.log(`🏆 Juego terminado por falta de cartas. Ganador: ${winner?.name || 'Empate'}`);
+          return;
+        }
+        
+        // Hay cartas en otras categorías, solo notificar que esta categoría se agotó
+        socket.emit('error', { message: `No hay más cartas de ${data.cardType}. Intenta con otra categoría.` });
         return;
       }
 
